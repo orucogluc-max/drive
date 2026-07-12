@@ -9,6 +9,7 @@ export interface DrivePayload {
   start_time: number;
   end_time: number;
   distance_meters: number;
+  duration_seconds: number;
 }
 
 export const SyncWorker = {
@@ -71,6 +72,7 @@ export const SyncWorker = {
           started_at: new Date(drive.start_time).toISOString(),
           ended_at: new Date(drive.end_time).toISOString(),
           distance_m: drive.distance_meters,
+          duration_s: drive.duration_seconds,
           // PostGIS handles GeoJSON cast
           // route_line: route_line as any
         });

@@ -2,7 +2,7 @@ import React from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TabNavigator } from './src/navigation/TabNavigator';
+import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 
 const queryClient = new QueryClient({
@@ -37,7 +37,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <NavigationContainer theme={navigationTheme}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-        <TabNavigator />
+        <RootNavigator />
       </NavigationContainer>
     </QueryClientProvider>
   );

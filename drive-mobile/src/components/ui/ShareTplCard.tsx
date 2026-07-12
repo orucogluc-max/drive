@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, memo } from 'react';
 import { View, StyleSheet, ImageBackground } from 'react-native';
 import { Text } from './Text';
 import { ScoreRing } from './ScoreRing';
@@ -15,23 +15,33 @@ interface ShareTplCardProps {
   photoUrl?: string;
   username: string;
   template?: ThemeId;
-  isPreview?: boolean;
+  // The card ALWAYS renders at these literal pixel dimensions — this is the
+  // single source of truth for its layout. There is no "preview mode" with
+  // its own sizing: callers who want an on-screen preview wrap this same
+  // component in <ScaledPreview> instead of asking ShareTplCard to lay
+  // itself out differently. That's what makes the preview provably
+  // WYSIWYG rather than a parallel approximation.
+  width: number;
+  height: number;
 }
 
-export const ShareTplCard = forwardRef<View, ShareTplCardProps>((props, ref) => {
-  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic', isPreview = false } = props;
+// Wrapped in memo so re-renders in JourneyComposerScreen that don't change
+// any of this component's own props (e.g. switching export format, which
+// changes width/height and is correctly caught by memo's prop comparison)
+// don't re-render the ImageBackground + ScoreRing + theme lookup uselessly.
+const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
+  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic', width, height } = props;
 
   const bgSource = photoUrl ? { uri: photoUrl } : mapImageUrl ? { uri: mapImageUrl } : undefined;
-  
+
   // Get JSON Theme Configuration
   const theme = getTheme(template);
   const { styles: ts } = theme;
 
   return (
     <View ref={ref} style={[
-      styles.container, 
-      isPreview ? styles.previewContainer : styles.renderContainer, 
-      { backgroundColor: ts.overlayColor } // Base color if no image
+      styles.container,
+      { width, height, backgroundColor: ts.overlayColor } // Base color if no image
     ]}>
       <ImageBackground 
         source={bgSource} 
@@ -119,19 +129,11 @@ export const ShareTplCard = forwardRef<View, ShareTplCardProps>((props, ref) => 
   );
 });
 
+export const ShareTplCard = memo(ShareTplCardImpl);
+
 const styles = StyleSheet.create({
-  container: { overflow: 'hidden' },
-  previewContainer: {
-    width: '100%',
-    aspectRatio: 9 / 16,
-    borderRadius: 24,
-    alignSelf: 'center',
-  },
-  renderContainer: {
-    width: 1080 / 2,
-    height: 1920 / 2,
-    position: 'absolute',
-    left: -10000,
+  container: {
+    overflow: 'hidden',
   },
   mapBackground: { flex: 1 },
   overlay: { flex: 1 },

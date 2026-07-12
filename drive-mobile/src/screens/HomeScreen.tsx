@@ -73,11 +73,16 @@ export function HomeScreen({ navigation }: any) {
 
     // Optimistic UI Update (Simplified)
     // Real implementation would update state count immediately
-    await supabase.from('journey_interactions').insert({
-      user_id: authUser.user.id,
-      drive_id: driveId,
-      interaction_type: type
-    }).catch(console.error); // Catch unique constraint errors if already interacted
+    try {
+      await supabase.from('journey_interactions').insert({
+        user_id: authUser.user.id,
+        drive_id: driveId,
+        interaction_type: type
+      });
+    } catch (err) {
+      // Catch unique constraint errors if already interacted
+      console.error(err);
+    }
   };
 
   const renderItem = ({ item }: { item: any }) => {
@@ -90,6 +95,7 @@ export function HomeScreen({ navigation }: any) {
         interactions={{ inspired: item.reaction_count || 0, wantToDrive: 0 }}
         comments={item.comment_count || 0}
         onInteract={(type) => handleInteraction(item.id, type)}
+        onPress={() => navigation.navigate('JourneyDetail', { journeyId: item.id })}
       />
     );
   };

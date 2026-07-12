@@ -1,19 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
-import { Text, ShareTplCard } from '../components/ui';
+import { Text, ShareTplCard, ScaledPreview } from '../components/ui';
 import { colors, spacing } from '../theme';
 import { Feather } from '@expo/vector-icons';
 import { useDriveStore } from '../store/useDriveStore';
 import { supabase } from '../lib/supabase';
 import ViewShot from 'react-native-view-shot';
+import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
 import { getAllThemes, ThemeId } from '../lib/themeEngine';
-
-type ExportFormat = 'story' | 'post' | 'landscape';
-const FORMATS: { id: ExportFormat, label: string, ratio: number, icon: any }[] = [
-  { id: 'story', label: 'Story (9:16)', ratio: 9 / 16, icon: 'smartphone' },
-  { id: 'post', label: 'Feed (4:5)', ratio: 4 / 5, icon: 'instagram' },
-  { id: 'landscape', label: 'Landscape (16:9)', ratio: 16 / 9, icon: 'monitor' }
-];
+import { EXPORT_FORMATS, ExportFormatId, getExportFormat, getExportDimensions } from '../utils/exportFormat';
+import { resolvePickedPhotoUri } from '../utils/imagePicker';
 
 export function JourneyComposerScreen({ navigation }: any) {
   const { currentDriveId, resetDrive, distanceMeters } = useDriveStore();
@@ -21,11 +18,11 @@ export function JourneyComposerScreen({ navigation }: any) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [scoreData, setScoreData] = useState<any>(null);
-  
+
   // Composer State
   const ALL_THEMES = getAllThemes();
   const [activeTemplate, setActiveTemplate] = useState<ThemeId>('cinematic');
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('story');
+  const [exportFormat, setExportFormat] = useState<ExportFormatId>('story');
   const [storyTitle, setStoryTitle] = useState('My Journey');
   const [username, setUsername] = useState('driver');
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
@@ -67,18 +64,36 @@ export function JourneyComposerScreen({ navigation }: any) {
 
   const handleDone = () => {
     resetDrive();
-    navigation.navigate('Home');
+    navigation.navigate('MainTabs', { screen: 'Home' });
+  };
+
+  const handlePickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.9,
+      allowsEditing: false,
+    });
+
+    const uri = resolvePickedPhotoUri(result);
+    if (uri) setPhotoUrl(uri);
   };
 
   const handleShare = async () => {
-    if (shareRef.current && shareRef.current.capture) {
-      try {
-        const uri = await shareRef.current.capture();
-        console.log(`Captured ${exportFormat.toUpperCase()}:`, uri);
-        // Implement React Native Share
-      } catch (err) {
-        console.error("Snapshot error", err);
+    if (!shareRef.current || !shareRef.current.capture) return;
+    try {
+      const uri = await shareRef.current.capture();
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: storyTitle || 'Share your Journey',
+        });
       }
+    } catch (err) {
+      console.error("Share error", err);
     }
   };
 
@@ -95,10 +110,13 @@ export function JourneyComposerScreen({ navigation }: any) {
   const distStr = `${Math.round(distanceMeters / 1000)} km`;
   const score = scoreData?.score_overall || 0;
   
-  const currentFormatDef = FORMATS.find(f => f.id === exportFormat)!;
+  const currentFormatDef = getExportFormat(exportFormat);
   const screenWidth = Dimensions.get('window').width;
   const previewWidth = screenWidth - spacing[8] * 2;
-  const previewHeight = previewWidth / currentFormatDef.ratio;
+  // Single source of truth for both the on-screen preview and the actual
+  // export capture target — see ScaledPreview.tsx for how the preview
+  // guarantees it stays a scaled copy of these exact dimensions.
+  const captureDimensions = getExportDimensions(currentFormatDef.ratio);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -119,7 +137,7 @@ export function JourneyComposerScreen({ navigation }: any) {
           
           {/* Format Selector */}
           <View style={styles.formatSelector}>
-             {FORMATS.map(fmt => (
+             {EXPORT_FORMATS.map(fmt => (
                 <TouchableOpacity 
                    key={fmt.id} 
                    style={[styles.formatBtn, exportFormat === fmt.id && styles.formatBtnActive]}
@@ -131,10 +149,18 @@ export function JourneyComposerScreen({ navigation }: any) {
              ))}
           </View>
 
-          {/* Live Preview (Visual Component) */}
+          {/* Live Preview — a scaled copy of the exact same layout that gets
+              captured for export below, not a separately-sized approximation. */}
           <View style={[styles.previewContainer, { width: screenWidth, alignItems: 'center' }]}>
-             <View style={{ width: previewWidth, height: previewHeight, borderRadius: 24, overflow: 'hidden' }}>
-                <ShareTplCard 
+             <ScaledPreview
+                captureWidth={captureDimensions.width}
+                captureHeight={captureDimensions.height}
+                displayWidth={previewWidth}
+                borderRadius={24}
+             >
+                <ShareTplCard
+                  width={captureDimensions.width}
+                  height={captureDimensions.height}
                   title={storyTitle}
                   score={score}
                   distance={distStr}
@@ -142,9 +168,8 @@ export function JourneyComposerScreen({ navigation }: any) {
                   username={username}
                   template={activeTemplate}
                   photoUrl={photoUrl}
-                  isPreview={true}
                 />
-             </View>
+             </ScaledPreview>
           </View>
 
           {/* Editor Controls */}
@@ -177,9 +202,7 @@ export function JourneyComposerScreen({ navigation }: any) {
               })}
             </ScrollView>
 
-            <TouchableOpacity style={styles.addPhotoBtn} onPress={() => {
-              setPhotoUrl(`https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=1080&q=80`);
-            }}>
+            <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickPhoto}>
               <Feather name="camera" size={20} color={colors.foreground} />
               <Text style={{ marginLeft: spacing[2] }}>{photoUrl ? "Change Background Photo" : "Add Background Photo"}</Text>
             </TouchableOpacity>
@@ -222,13 +245,17 @@ export function JourneyComposerScreen({ navigation }: any) {
 
         </ScrollView>
 
-        {/* Hidden ViewShot for actual rendering in high quality (Render Canvas) */}
-        <ViewShot 
-            ref={shareRef} 
-            options={{ format: "jpg", quality: 1.0 }} 
-            style={[styles.hiddenSnapshot, { width: 1080, height: 1080 / currentFormatDef.ratio }]}
+        {/* Hidden capture target — the actual export. Same ShareTplCard,
+            same captureDimensions as the preview above, rendered at scale 1
+            (no transform) instead of visually shrunk. */}
+        <ViewShot
+            ref={shareRef}
+            options={{ format: "jpg", quality: 1.0 }}
+            style={[styles.hiddenSnapshot, { width: captureDimensions.width, height: captureDimensions.height }]}
         >
-          <ShareTplCard 
+          <ShareTplCard
+            width={captureDimensions.width}
+            height={captureDimensions.height}
             title={storyTitle}
             score={score}
             distance={distStr}
@@ -236,7 +263,6 @@ export function JourneyComposerScreen({ navigation }: any) {
             username={username}
             template={activeTemplate}
             photoUrl={photoUrl}
-            isPreview={false}
           />
         </ViewShot>
 

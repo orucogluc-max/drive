@@ -17,4 +17,5 @@ export * from './SkeletonLoader';
 export * from './TelemetryChart';
 export * from './BottomSheet';
 export * from './ShareTplCard';
+export * from './ScaledPreview';
 export * from './AnimatedNumber';

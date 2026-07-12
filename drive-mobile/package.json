@@ -30,6 +30,7 @@
     "expo-linear-gradient": "~57.0.0",
     "expo-location": "*",
     "expo-sensors": "*",
+    "expo-sharing": "*",
     "expo-splash-screen": "*",
     "expo-status-bar": "*",
     "expo-task-manager": "~57.0.2",
@@ -52,7 +53,14 @@
     "@types/react": "*",
     "@types/react-native-maps": "*",
     "jest": "*",
+    "jest-expo": "^57.0.1",
     "react-test-renderer": "*",
     "typescript": "*"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": [
+      "./jest.setup.js"
+    ]
   }
 }
