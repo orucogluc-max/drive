@@ -13,7 +13,7 @@ import { EXPORT_FORMATS, ExportFormatId, getExportFormat, getExportDimensions } 
 import { resolvePickedPhotoUri } from '../utils/imagePicker';
 
 export function JourneyComposerScreen({ navigation }: any) {
-  const { currentDriveId, resetDrive, distanceMeters } = useDriveStore();
+  const { currentDriveId, resetDrive, distanceMeters, telemetryPoints } = useDriveStore();
   const shareRef = useRef<any>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -168,6 +168,7 @@ export function JourneyComposerScreen({ navigation }: any) {
                   username={username}
                   template={activeTemplate}
                   photoUrl={photoUrl}
+                  routePoints={telemetryPoints}
                 />
              </ScaledPreview>
           </View>
@@ -263,6 +264,7 @@ export function JourneyComposerScreen({ navigation }: any) {
             username={username}
             template={activeTemplate}
             photoUrl={photoUrl}
+            routePoints={telemetryPoints}
           />
         </ViewShot>
 
