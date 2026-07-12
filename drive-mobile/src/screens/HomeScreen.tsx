@@ -73,11 +73,16 @@ export function HomeScreen({ navigation }: any) {
 
     // Optimistic UI Update (Simplified)
     // Real implementation would update state count immediately
-    await supabase.from('journey_interactions').insert({
-      user_id: authUser.user.id,
-      drive_id: driveId,
-      interaction_type: type
-    }).catch(console.error); // Catch unique constraint errors if already interacted
+    try {
+      await supabase.from('journey_interactions').insert({
+        user_id: authUser.user.id,
+        drive_id: driveId,
+        interaction_type: type
+      });
+    } catch (err) {
+      // Catch unique constraint errors if already interacted
+      console.error(err);
+    }
   };
 
   const renderItem = ({ item }: { item: any }) => {

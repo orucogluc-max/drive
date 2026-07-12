@@ -10,9 +10,14 @@ interface ScoreRingProps {
   score: number;
   size?: number;
   strokeWidth?: number;
+  // Optional static stroke color (e.g. a Journey theme's accent color).
+  // When provided, overrides the default error/warning/success score
+  // interpolation — lets ShareTplCard tint the ring to match the active
+  // theme instead of always showing a generic health-style gradient.
+  brandColor?: string;
 }
 
-export function ScoreRing({ score, size = 120, strokeWidth = 8 }: ScoreRingProps) {
+export function ScoreRing({ score, size = 120, strokeWidth = 8, brandColor }: ScoreRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const progress = useSharedValue(0);
@@ -26,7 +31,7 @@ export function ScoreRing({ score, size = 120, strokeWidth = 8 }: ScoreRingProps
 
   const animatedProps = useAnimatedProps(() => {
     const strokeDashoffset = circumference - progress.value * circumference;
-    const strokeColor = interpolateColor(
+    const interpolatedColor = interpolateColor(
       progress.value,
       [0, 0.5, 1],
       [colors.error, colors.warning, colors.success]
@@ -34,7 +39,7 @@ export function ScoreRing({ score, size = 120, strokeWidth = 8 }: ScoreRingProps
 
     return {
       strokeDashoffset,
-      stroke: strokeColor as string,
+      stroke: brandColor ?? (interpolatedColor as string),
     };
   });
 

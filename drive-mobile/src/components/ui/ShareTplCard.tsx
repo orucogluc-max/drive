@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, memo } from 'react';
 import { View, StyleSheet, ImageBackground } from 'react-native';
 import { Text } from './Text';
 import { ScoreRing } from './ScoreRing';
@@ -18,7 +18,12 @@ interface ShareTplCardProps {
   isPreview?: boolean;
 }
 
-export const ShareTplCard = forwardRef<View, ShareTplCardProps>((props, ref) => {
+// Wrapped in memo so re-renders in JourneyComposerScreen that don't change
+// any of this component's own props (e.g. switching export format, which
+// only resizes the *wrapping* container, not a ShareTplCard prop) don't
+// re-render the ImageBackground + ScoreRing + theme lookup unnecessarily —
+// this matters most for the hidden full-resolution capture instance.
+const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
   const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic' } = props;
 
   const bgSource = photoUrl ? { uri: photoUrl } : mapImageUrl ? { uri: mapImageUrl } : undefined;
@@ -117,6 +122,8 @@ export const ShareTplCard = forwardRef<View, ShareTplCardProps>((props, ref) => 
     </View>
   );
 });
+
+export const ShareTplCard = memo(ShareTplCardImpl);
 
 const styles = StyleSheet.create({
   // Fills whatever container it's placed in — the parent (composer preview

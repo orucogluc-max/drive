@@ -9,13 +9,8 @@ import ViewShot from 'react-native-view-shot';
 import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import { getAllThemes, ThemeId } from '../lib/themeEngine';
-
-type ExportFormat = 'story' | 'post' | 'landscape';
-const FORMATS: { id: ExportFormat, label: string, ratio: number, icon: any }[] = [
-  { id: 'story', label: 'Story (9:16)', ratio: 9 / 16, icon: 'smartphone' },
-  { id: 'post', label: 'Feed (4:5)', ratio: 4 / 5, icon: 'instagram' },
-  { id: 'landscape', label: 'Landscape (16:9)', ratio: 16 / 9, icon: 'monitor' }
-];
+import { EXPORT_FORMATS, ExportFormatId, getExportFormat, getExportDimensions } from '../utils/exportFormat';
+import { resolvePickedPhotoUri } from '../utils/imagePicker';
 
 export function JourneyComposerScreen({ navigation }: any) {
   const { currentDriveId, resetDrive, distanceMeters } = useDriveStore();
@@ -23,11 +18,11 @@ export function JourneyComposerScreen({ navigation }: any) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [scoreData, setScoreData] = useState<any>(null);
-  
+
   // Composer State
   const ALL_THEMES = getAllThemes();
   const [activeTemplate, setActiveTemplate] = useState<ThemeId>('cinematic');
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('story');
+  const [exportFormat, setExportFormat] = useState<ExportFormatId>('story');
   const [storyTitle, setStoryTitle] = useState('My Journey');
   const [username, setUsername] = useState('driver');
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
@@ -82,9 +77,8 @@ export function JourneyComposerScreen({ navigation }: any) {
       allowsEditing: false,
     });
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUrl(result.assets[0].uri);
-    }
+    const uri = resolvePickedPhotoUri(result);
+    if (uri) setPhotoUrl(uri);
   };
 
   const handleShare = async () => {
@@ -116,10 +110,11 @@ export function JourneyComposerScreen({ navigation }: any) {
   const distStr = `${Math.round(distanceMeters / 1000)} km`;
   const score = scoreData?.score_overall || 0;
   
-  const currentFormatDef = FORMATS.find(f => f.id === exportFormat)!;
+  const currentFormatDef = getExportFormat(exportFormat);
   const screenWidth = Dimensions.get('window').width;
   const previewWidth = screenWidth - spacing[8] * 2;
   const previewHeight = previewWidth / currentFormatDef.ratio;
+  const captureDimensions = getExportDimensions(currentFormatDef.ratio);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -140,7 +135,7 @@ export function JourneyComposerScreen({ navigation }: any) {
           
           {/* Format Selector */}
           <View style={styles.formatSelector}>
-             {FORMATS.map(fmt => (
+             {EXPORT_FORMATS.map(fmt => (
                 <TouchableOpacity 
                    key={fmt.id} 
                    style={[styles.formatBtn, exportFormat === fmt.id && styles.formatBtnActive]}
@@ -242,10 +237,10 @@ export function JourneyComposerScreen({ navigation }: any) {
         </ScrollView>
 
         {/* Hidden ViewShot for actual rendering in high quality (Render Canvas) */}
-        <ViewShot 
-            ref={shareRef} 
-            options={{ format: "jpg", quality: 1.0 }} 
-            style={[styles.hiddenSnapshot, { width: 1080, height: 1080 / currentFormatDef.ratio }]}
+        <ViewShot
+            ref={shareRef}
+            options={{ format: "jpg", quality: 1.0 }}
+            style={[styles.hiddenSnapshot, { width: captureDimensions.width, height: captureDimensions.height }]}
         >
           <ShareTplCard 
             title={storyTitle}

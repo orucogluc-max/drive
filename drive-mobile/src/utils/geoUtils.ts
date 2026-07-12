@@ -94,6 +94,14 @@ export function simplifyPolyline<T extends GeoPoint>(points: T[], epsilon: numbe
   }
 }
 
+// Minimum device-reported ground speed (m/s) below which a position delta
+// between consecutive samples is treated as GPS drift/jitter rather than
+// real movement. ~0.6 m/s (~2.2 km/h) sits below any realistic slow-driving
+// speed but above the typical drift magnitude of a stationary GNSS fix at a
+// 1s sample interval. Used to gate cumulative distance accumulation so a
+// parked car doesn't silently rack up distance from GPS noise.
+export const MIN_MOVING_SPEED_MS = 0.6;
+
 // 4. GPS Accuracy & Outlier Filter
 export function filterTelemetry(currentPoint: TelemetryPoint, lastPoint: TelemetryPoint | null): boolean {
   // Reject if accuracy is worse than 30 meters

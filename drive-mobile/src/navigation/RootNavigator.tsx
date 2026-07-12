@@ -9,20 +9,10 @@ import { RouteDetailScreen } from '../screens/RouteDetailScreen';
 import { NotificationScreen } from '../screens/NotificationScreen';
 import { PrivacyScreen } from '../screens/PrivacyScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { RootStackParamList } from './routes';
 
-export type RootStackParamList = {
-  MainTabs: undefined;
-  JourneyComposer: undefined;
-  JourneyDetail: { journeyId: string };
-  ClubList: undefined;
-  ClubDetail: { clubId: string };
-  RouteDetail: { routeId: string };
-  Notifications: undefined;
-  Privacy: undefined;
-  // Named distinctly from the tab-level "Profile" screen so React Navigation
-  // never has two same-named routes nested inside one another.
-  UserProfile: { userId?: string };
-};
+export type { RootStackParamList } from './routes';
+export { ROOT_STACK_ROUTE_NAMES } from './routes';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
