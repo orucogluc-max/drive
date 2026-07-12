@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "DRIVE",
+    "slug": "drive-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "drive",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.drive.app",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "DRIVE uses your location to record your driving routes, calculate distance, and show your position on the map.",
+        "NSLocationWhenInUseUsageDescription": "DRIVE needs your location to record driving routes and show your position on the map.",
+        "NSMotionUsageDescription": "DRIVE uses motion sensors to calculate driving smoothness and comfort scores.",
+        "NSCameraUsageDescription": "DRIVE needs camera access to take vehicle photos.",
+        "NSPhotoLibraryUsageDescription": "DRIVE needs photo library access to select vehicle photos.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
+    },
+    "android": {
+      "package": "com.drive.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F0F11",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "HIGH_SAMPLING_RATE_SENSORS"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "DRIVE uses your location to record your driving routes, calculate distance, and show your position on the map.",
+          "locationAlwaysPermission": "Allow DRIVE to access your location in the background to continue recording your drive.",
+          "locationWhenInUsePermission": "DRIVE needs your location to record driving routes.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "DRIVE uses motion sensors to calculate driving smoothness and comfort scores."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
