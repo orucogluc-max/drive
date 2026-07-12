@@ -85,7 +85,7 @@ export function RouteDetailScreen({ route: routeParams, navigation }: any) {
 
       {/* Floating Action Bar */}
       <View style={styles.floatingActionBar}>
-        <Button style={{ flex: 1 }} onPress={() => navigation.navigate('Record', { routeId: route.id })}>
+        <Button style={{ flex: 1 }} onPress={() => navigation.navigate('MainTabs', { screen: 'Record', params: { routeId: route.id } })}>
           Drive This Route
         </Button>
       </View>

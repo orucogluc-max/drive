@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 // @ts-ignore
 import { storage } from '../lib/mmkv';
 import { LocationService } from '../services/LocationService';
-import { TelemetryPoint } from '../utils/geoUtils';
+import { TelemetryPoint, getDistance } from '../utils/geoUtils';
 import { SyncWorker } from '../services/SyncWorker';
 
 type DriveStateStatus = 'IDLE' | 'STARTING' | 'RECORDING' | 'PAUSED' | 'COMPLETED';
@@ -71,8 +71,13 @@ export const useDriveStore = create<DriveState>()(
       stopDrive: async () => {
         const state = get();
         await LocationService.stopBackgroundUpdates();
-        set({ status: 'COMPLETED' });
-        
+
+        const durationSeconds = state.startTime
+          ? Math.max(0, Math.floor((Date.now() - state.startTime) / 1000))
+          : 0;
+
+        set({ status: 'COMPLETED', durationSeconds });
+
         if (state.currentDriveId && state.startTime) {
           SyncWorker.queueDriveForSync({
             drive_id: state.currentDriveId,
@@ -80,13 +85,19 @@ export const useDriveStore = create<DriveState>()(
             start_time: state.startTime,
             end_time: Date.now(),
             distance_meters: state.distanceMeters,
+            duration_seconds: durationSeconds,
           });
         }
       },
 
-      addTelemetry: (point) => set((state) => ({
-        telemetryPoints: [...state.telemetryPoints, point]
-      })),
+      addTelemetry: (point) => set((state) => {
+        const lastPoint = state.telemetryPoints[state.telemetryPoints.length - 1];
+        const incrementalDistance = lastPoint ? getDistance(lastPoint, point) : 0;
+        return {
+          telemetryPoints: [...state.telemetryPoints, point],
+          distanceMeters: state.distanceMeters + incrementalDistance,
+        };
+      }),
 
       resetDrive: () => set({
         status: 'IDLE',

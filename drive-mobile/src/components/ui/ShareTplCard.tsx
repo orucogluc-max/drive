@@ -19,18 +19,17 @@ interface ShareTplCardProps {
 }
 
 export const ShareTplCard = forwardRef<View, ShareTplCardProps>((props, ref) => {
-  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic', isPreview = false } = props;
+  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic' } = props;
 
   const bgSource = photoUrl ? { uri: photoUrl } : mapImageUrl ? { uri: mapImageUrl } : undefined;
-  
+
   // Get JSON Theme Configuration
   const theme = getTheme(template);
   const { styles: ts } = theme;
 
   return (
     <View ref={ref} style={[
-      styles.container, 
-      isPreview ? styles.previewContainer : styles.renderContainer, 
+      styles.container,
       { backgroundColor: ts.overlayColor } // Base color if no image
     ]}>
       <ImageBackground 
@@ -120,18 +119,13 @@ export const ShareTplCard = forwardRef<View, ShareTplCardProps>((props, ref) => 
 });
 
 const styles = StyleSheet.create({
-  container: { overflow: 'hidden' },
-  previewContainer: {
+  // Fills whatever container it's placed in — the parent (composer preview
+  // wrapper or the offscreen ViewShot capture target) is responsible for
+  // sizing itself to the selected export format (9:16 / 4:5 / 16:9).
+  container: {
     width: '100%',
-    aspectRatio: 9 / 16,
-    borderRadius: 24,
-    alignSelf: 'center',
-  },
-  renderContainer: {
-    width: 1080 / 2,
-    height: 1920 / 2,
-    position: 'absolute',
-    left: -10000,
+    height: '100%',
+    overflow: 'hidden',
   },
   mapBackground: { flex: 1 },
   overlay: { flex: 1 },

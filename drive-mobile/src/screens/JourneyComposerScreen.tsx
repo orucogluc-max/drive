@@ -6,6 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import { useDriveStore } from '../store/useDriveStore';
 import { supabase } from '../lib/supabase';
 import ViewShot from 'react-native-view-shot';
+import * as ImagePicker from 'expo-image-picker';
+import * as Sharing from 'expo-sharing';
 import { getAllThemes, ThemeId } from '../lib/themeEngine';
 
 type ExportFormat = 'story' | 'post' | 'landscape';
@@ -67,18 +69,37 @@ export function JourneyComposerScreen({ navigation }: any) {
 
   const handleDone = () => {
     resetDrive();
-    navigation.navigate('Home');
+    navigation.navigate('MainTabs', { screen: 'Home' });
+  };
+
+  const handlePickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.9,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhotoUrl(result.assets[0].uri);
+    }
   };
 
   const handleShare = async () => {
-    if (shareRef.current && shareRef.current.capture) {
-      try {
-        const uri = await shareRef.current.capture();
-        console.log(`Captured ${exportFormat.toUpperCase()}:`, uri);
-        // Implement React Native Share
-      } catch (err) {
-        console.error("Snapshot error", err);
+    if (!shareRef.current || !shareRef.current.capture) return;
+    try {
+      const uri = await shareRef.current.capture();
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: storyTitle || 'Share your Journey',
+        });
       }
+    } catch (err) {
+      console.error("Share error", err);
     }
   };
 
@@ -177,9 +198,7 @@ export function JourneyComposerScreen({ navigation }: any) {
               })}
             </ScrollView>
 
-            <TouchableOpacity style={styles.addPhotoBtn} onPress={() => {
-              setPhotoUrl(`https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=1080&q=80`);
-            }}>
+            <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickPhoto}>
               <Feather name="camera" size={20} color={colors.foreground} />
               <Text style={{ marginLeft: spacing[2] }}>{photoUrl ? "Change Background Photo" : "Add Background Photo"}</Text>
             </TouchableOpacity>

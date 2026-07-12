@@ -48,7 +48,7 @@ export function NotificationScreen({ navigation }: any) {
       <TouchableOpacity 
         style={[styles.notificationCard, !item.is_read && styles.unreadCard]}
         onPress={() => {
-           if (item.type === 'follow' && item.sender_id) navigation.navigate('Profile', { userId: item.sender_id });
+           if (item.type === 'follow' && item.sender_id) navigation.navigate('UserProfile', { userId: item.sender_id });
            // Route to drive or badge if applicable
         }}
       >

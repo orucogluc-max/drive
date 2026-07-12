@@ -90,6 +90,7 @@ export function HomeScreen({ navigation }: any) {
         interactions={{ inspired: item.reaction_count || 0, wantToDrive: 0 }}
         comments={item.comment_count || 0}
         onInteract={(type) => handleInteraction(item.id, type)}
+        onPress={() => navigation.navigate('JourneyDetail', { journeyId: item.id })}
       />
     );
   };

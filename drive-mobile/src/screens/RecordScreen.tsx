@@ -20,7 +20,7 @@ export function RecordScreen({ navigation }: any) {
       startDrive();
     } else {
       stopDrive();
-      navigation.navigate('DriveSummary');
+      navigation.navigate('JourneyComposer');
     }
   };
 

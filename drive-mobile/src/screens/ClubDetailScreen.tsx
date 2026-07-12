@@ -74,7 +74,7 @@ export function ClubDetailScreen({ route, navigation }: any) {
                 <Text variant="caption" color="brand" style={{ marginTop: spacing[1] }}>{new Date(ev.event_date).toLocaleString()}</Text>
                 <Text variant="caption" color="foregroundMuted" style={{ marginTop: spacing[1] }}>📍 {ev.meeting_address || 'TBD'}</Text>
               </View>
-              <Button style={{ paddingHorizontal: spacing[3], paddingVertical: spacing[2] }} onPress={() => navigation.navigate('DriveSummary')}>Join</Button>
+              <Button style={{ paddingHorizontal: spacing[3], paddingVertical: spacing[2] }} onPress={() => navigation.navigate('MainTabs', { screen: 'Record' })}>Join</Button>
             </View>
           ))
         )}
