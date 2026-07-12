@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
-import { Text, ShareTplCard } from '../components/ui';
+import { Text, ShareTplCard, ScaledPreview } from '../components/ui';
 import { colors, spacing } from '../theme';
 import { Feather } from '@expo/vector-icons';
 import { useDriveStore } from '../store/useDriveStore';
@@ -113,7 +113,9 @@ export function JourneyComposerScreen({ navigation }: any) {
   const currentFormatDef = getExportFormat(exportFormat);
   const screenWidth = Dimensions.get('window').width;
   const previewWidth = screenWidth - spacing[8] * 2;
-  const previewHeight = previewWidth / currentFormatDef.ratio;
+  // Single source of truth for both the on-screen preview and the actual
+  // export capture target — see ScaledPreview.tsx for how the preview
+  // guarantees it stays a scaled copy of these exact dimensions.
   const captureDimensions = getExportDimensions(currentFormatDef.ratio);
 
   return (
@@ -147,10 +149,18 @@ export function JourneyComposerScreen({ navigation }: any) {
              ))}
           </View>
 
-          {/* Live Preview (Visual Component) */}
+          {/* Live Preview — a scaled copy of the exact same layout that gets
+              captured for export below, not a separately-sized approximation. */}
           <View style={[styles.previewContainer, { width: screenWidth, alignItems: 'center' }]}>
-             <View style={{ width: previewWidth, height: previewHeight, borderRadius: 24, overflow: 'hidden' }}>
-                <ShareTplCard 
+             <ScaledPreview
+                captureWidth={captureDimensions.width}
+                captureHeight={captureDimensions.height}
+                displayWidth={previewWidth}
+                borderRadius={24}
+             >
+                <ShareTplCard
+                  width={captureDimensions.width}
+                  height={captureDimensions.height}
                   title={storyTitle}
                   score={score}
                   distance={distStr}
@@ -158,9 +168,8 @@ export function JourneyComposerScreen({ navigation }: any) {
                   username={username}
                   template={activeTemplate}
                   photoUrl={photoUrl}
-                  isPreview={true}
                 />
-             </View>
+             </ScaledPreview>
           </View>
 
           {/* Editor Controls */}
@@ -236,13 +245,17 @@ export function JourneyComposerScreen({ navigation }: any) {
 
         </ScrollView>
 
-        {/* Hidden ViewShot for actual rendering in high quality (Render Canvas) */}
+        {/* Hidden capture target — the actual export. Same ShareTplCard,
+            same captureDimensions as the preview above, rendered at scale 1
+            (no transform) instead of visually shrunk. */}
         <ViewShot
             ref={shareRef}
             options={{ format: "jpg", quality: 1.0 }}
             style={[styles.hiddenSnapshot, { width: captureDimensions.width, height: captureDimensions.height }]}
         >
-          <ShareTplCard 
+          <ShareTplCard
+            width={captureDimensions.width}
+            height={captureDimensions.height}
             title={storyTitle}
             score={score}
             distance={distStr}
@@ -250,7 +263,6 @@ export function JourneyComposerScreen({ navigation }: any) {
             username={username}
             template={activeTemplate}
             photoUrl={photoUrl}
-            isPreview={false}
           />
         </ViewShot>
 

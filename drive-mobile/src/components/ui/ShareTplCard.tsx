@@ -15,16 +15,22 @@ interface ShareTplCardProps {
   photoUrl?: string;
   username: string;
   template?: ThemeId;
-  isPreview?: boolean;
+  // The card ALWAYS renders at these literal pixel dimensions — this is the
+  // single source of truth for its layout. There is no "preview mode" with
+  // its own sizing: callers who want an on-screen preview wrap this same
+  // component in <ScaledPreview> instead of asking ShareTplCard to lay
+  // itself out differently. That's what makes the preview provably
+  // WYSIWYG rather than a parallel approximation.
+  width: number;
+  height: number;
 }
 
 // Wrapped in memo so re-renders in JourneyComposerScreen that don't change
 // any of this component's own props (e.g. switching export format, which
-// only resizes the *wrapping* container, not a ShareTplCard prop) don't
-// re-render the ImageBackground + ScoreRing + theme lookup unnecessarily —
-// this matters most for the hidden full-resolution capture instance.
+// changes width/height and is correctly caught by memo's prop comparison)
+// don't re-render the ImageBackground + ScoreRing + theme lookup uselessly.
 const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
-  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic' } = props;
+  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic', width, height } = props;
 
   const bgSource = photoUrl ? { uri: photoUrl } : mapImageUrl ? { uri: mapImageUrl } : undefined;
 
@@ -35,7 +41,7 @@ const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
   return (
     <View ref={ref} style={[
       styles.container,
-      { backgroundColor: ts.overlayColor } // Base color if no image
+      { width, height, backgroundColor: ts.overlayColor } // Base color if no image
     ]}>
       <ImageBackground 
         source={bgSource} 
@@ -126,12 +132,7 @@ const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
 export const ShareTplCard = memo(ShareTplCardImpl);
 
 const styles = StyleSheet.create({
-  // Fills whatever container it's placed in — the parent (composer preview
-  // wrapper or the offscreen ViewShot capture target) is responsible for
-  // sizing itself to the selected export format (9:16 / 4:5 / 16:9).
   container: {
-    width: '100%',
-    height: '100%',
     overflow: 'hidden',
   },
   mapBackground: { flex: 1 },
