@@ -2,9 +2,11 @@ import React, { forwardRef, memo } from 'react';
 import { View, StyleSheet, ImageBackground } from 'react-native';
 import { Text } from './Text';
 import { ScoreRing } from './ScoreRing';
+import { RouteOverlay } from './RouteOverlay';
 import { spacing } from '../../theme';
 import { Feather } from '@expo/vector-icons';
 import { getTheme, ThemeId } from '../../lib/themeEngine';
+import { GeoPoint } from '../../utils/geoUtils';
 
 interface ShareTplCardProps {
   title: string;
@@ -15,6 +17,10 @@ interface ShareTplCardProps {
   photoUrl?: string;
   username: string;
   template?: ThemeId;
+  // The Journey's filtered GPS trace. Optional — when omitted, too short,
+  // or the drive never really moved, RouteOverlay simply renders nothing
+  // rather than a broken placeholder (see routeGeometry.isRouteRenderable).
+  routePoints?: GeoPoint[];
   // The card ALWAYS renders at these literal pixel dimensions — this is the
   // single source of truth for its layout. There is no "preview mode" with
   // its own sizing: callers who want an on-screen preview wrap this same
@@ -30,7 +36,7 @@ interface ShareTplCardProps {
 // changes width/height and is correctly caught by memo's prop comparison)
 // don't re-render the ImageBackground + ScoreRing + theme lookup uselessly.
 const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
-  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic', width, height } = props;
+  const { title, score, distance, duration, mapImageUrl, photoUrl, username, template = 'cinematic', routePoints, width, height } = props;
 
   const bgSource = photoUrl ? { uri: photoUrl } : mapImageUrl ? { uri: mapImageUrl } : undefined;
 
@@ -50,7 +56,13 @@ const ShareTplCardImpl = forwardRef<View, ShareTplCardProps>((props, ref) => {
         blurRadius={ts.blurEffect ? 10 : 0}
       >
         <View style={[styles.overlay, { backgroundColor: ts.overlayColor, opacity: ts.overlayOpacity, position: 'absolute', width: '100%', height: '100%' }]} />
-        
+
+        {/* Route overlay renders above the photo/scrim but below the text
+            content layer below, so title/score/stats stay fully legible. */}
+        {ts.showMapLine && (
+          <RouteOverlay points={routePoints ?? []} cardWidth={width} cardHeight={height} config={ts.route} />
+        )}
+
         <View style={styles.contentLayer}>
           
           {/* Header Layout */}
