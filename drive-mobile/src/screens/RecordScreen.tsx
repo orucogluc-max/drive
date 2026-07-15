@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { Text, FloatingRecordButton, StatTile } from '../components/ui';
 import { colors, spacing } from '../theme';
@@ -7,13 +7,25 @@ import { useDriveStore } from '../store/useDriveStore';
 export function RecordScreen({ navigation }: any) {
   const { status, telemetryPoints, startTime, totalPausedMs, startDrive, stopDrive } = useDriveStore();
 
+  // Drives the stopwatch: ticks once a second while recording, so DURATION
+  // updates in real time instead of only when a new GPS point happens to
+  // trigger a re-render (which previously meant it could visibly stall for
+  // several seconds at a red light or with a weak signal).
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (status !== 'RECORDING') return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [status]);
+
   const currentSpeedMs = telemetryPoints.length > 0 ? telemetryPoints[telemetryPoints.length - 1].speed_ms : 0;
   const speedKmh = Math.round(currentSpeedMs * 3.6);
 
   // Active recording time so far (matches the definition persisted as
   // drives.duration_s in useDriveStore.stopDrive — see its doc comment).
   const durationS = startTime && status === 'RECORDING'
-    ? Math.floor((Date.now() - startTime - totalPausedMs) / 1000)
+    ? Math.floor((now - startTime - totalPausedMs) / 1000)
     : 0;
   const minutes = Math.floor(durationS / 60).toString().padStart(2, '0');
   const seconds = (durationS % 60).toString().padStart(2, '0');
