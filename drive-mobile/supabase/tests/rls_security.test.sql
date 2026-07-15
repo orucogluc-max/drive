@@ -1,13 +1,22 @@
 -- RLS security regression tests for Phase 2 (Security Hardening).
 --
--- NOT executed as part of this PR's automated verification: no local
--- Postgres/Supabase instance was available in the development environment
--- (Docker daemon could not be started; see PR description). This file is
--- written to be genuinely runnable, not just documentation - every check
--- either passes silently or RAISEs a clear EXCEPTION naming the failed
--- scenario, so a non-zero/error exit from psql means a real regression.
+-- EXECUTED and PASSING (all 9 checks, covering all 6 required scenarios)
+-- against a real local PostgreSQL 17 instance. Docker Desktop's daemon
+-- could not be started in the original development environment, so rather
+-- than leave this only as documentation, it was run against plain
+-- PostgreSQL using the minimal environment bootstrap in
+-- supabase/tests/bootstrap_local_pg.sql (auth.uid()/storage stand-ins,
+-- the real policy text copy-pasted from the actual migrations). See that
+-- file's header for exact run instructions and what it does and doesn't
+-- cover (no PostGIS, no real GoTrue/Storage service).
 --
--- How to run once Docker is available:
+-- Every check either passes silently (NOTICE) or RAISEs a clear EXCEPTION
+-- naming the failed scenario, so a non-zero/error exit from psql means a
+-- real regression.
+--
+-- To run against the full Supabase stack instead (e.g. once Docker is
+-- available), for a higher-fidelity check that also covers PostGIS-backed
+-- tables and the real Storage/Auth services:
 --   supabase start
 --   supabase db reset            -- applies all migrations incl. the
 --                                 -- security_hardening one, plus seed.sql
