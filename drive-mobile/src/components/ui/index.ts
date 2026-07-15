@@ -14,7 +14,6 @@ export * from './IconBadge';
 export * from './MapOverlay';
 export * from './AchievementBadge';
 export * from './SkeletonLoader';
-export * from './TelemetryChart';
 export * from './BottomSheet';
 export * from './ShareTplCard';
 export * from './ScaledPreview';
