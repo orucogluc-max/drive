@@ -1,4 +1,4 @@
-import { useDriveStore } from '../src/store/useDriveStore';
+import { useDriveStore, partializeDriveState } from '../src/store/useDriveStore';
 import { LocationService } from '../src/services/LocationService';
 import { SyncWorker } from '../src/services/SyncWorker';
 import { MIN_MOVING_SPEED_MS } from '../src/utils/geoUtils';
@@ -154,6 +154,68 @@ describe('useDriveStore', () => {
     it('pauseDrive is a no-op when not currently recording', async () => {
       useDriveStore.getState().pauseDrive();
       expect(useDriveStore.getState().status).toBe('IDLE');
+    });
+  });
+
+  describe('partializeDriveState (persistence performance)', () => {
+    it('excludes telemetryPoints from what gets persisted', () => {
+      const fullState = {
+        ...useDriveStore.getState(),
+        telemetryPoints: [
+          { latitude: 1, longitude: 1, timestamp: 0, speed_ms: 5, accuracy: 5, heading: 0 },
+          { latitude: 2, longitude: 2, timestamp: 1000, speed_ms: 5, accuracy: 5, heading: 0 },
+        ],
+      };
+
+      const persisted = partializeDriveState(fullState);
+
+      expect(persisted).not.toHaveProperty('telemetryPoints');
+    });
+
+    it('keeps every other field needed to resume showing drive progress after a restart', () => {
+      const fullState = {
+        ...useDriveStore.getState(),
+        status: 'RECORDING' as const,
+        currentDriveId: 'drive-1',
+        startTime: 12345,
+        durationSeconds: 42,
+        distanceMeters: 999,
+        pausedAt: null,
+        totalPausedMs: 500,
+      };
+
+      const persisted = partializeDriveState(fullState);
+
+      expect(persisted).toEqual({
+        status: 'RECORDING',
+        currentDriveId: 'drive-1',
+        startTime: 12345,
+        durationSeconds: 42,
+        distanceMeters: 999,
+        pausedAt: null,
+        totalPausedMs: 500,
+      });
+    });
+
+    it('does not grow in size as telemetryPoints grows - the actual performance fix', () => {
+      const smallState = {
+        ...useDriveStore.getState(),
+        telemetryPoints: [{ latitude: 1, longitude: 1, timestamp: 0, speed_ms: 5, accuracy: 5, heading: 0 }],
+      };
+      const largeState = {
+        ...useDriveStore.getState(),
+        telemetryPoints: Array.from({ length: 5000 }, (_, i) => ({
+          latitude: 1, longitude: 1, timestamp: i * 1000, speed_ms: 5, accuracy: 5, heading: 0,
+        })),
+      };
+
+      const smallPersistedSize = JSON.stringify(partializeDriveState(smallState)).length;
+      const largePersistedSize = JSON.stringify(partializeDriveState(largeState)).length;
+
+      // A 5000-point (~83 minute) drive must persist to the same size as a
+      // 1-point drive - if this ever fails, telemetryPoints leaked back into
+      // the persisted payload and the O(n^2) write cost is back.
+      expect(largePersistedSize).toBe(smallPersistedSize);
     });
   });
 });

@@ -37,6 +37,24 @@ interface DriveState {
   resetDrive: () => void;
 }
 
+// The subset of DriveState that actually gets written to MMKV. Extracted
+// as a standalone, exported function (rather than an inline closure passed
+// to persist()) so its one job — excluding telemetryPoints — is directly
+// unit-testable without needing to reach into Zustand's persist internals.
+// See the comment on the persist() call below for why telemetryPoints is
+// excluded.
+export function partializeDriveState(state: DriveState) {
+  return {
+    status: state.status,
+    currentDriveId: state.currentDriveId,
+    startTime: state.startTime,
+    durationSeconds: state.durationSeconds,
+    distanceMeters: state.distanceMeters,
+    pausedAt: state.pausedAt,
+    totalPausedMs: state.totalPausedMs,
+  };
+}
+
 const zustandStorage = {
   setItem: (name: string, value: string) => {
     return storage.set(name, value);
@@ -158,6 +176,21 @@ export const useDriveStore = create<DriveState>()(
     {
       name: 'drive-storage',
       storage: createJSONStorage(() => zustandStorage),
+      // telemetryPoints is deliberately excluded from what gets persisted.
+      // Without this, Zustand's persist middleware re-serializes (and, since
+      // the security hardening pass, re-encrypts) the ENTIRE store — array
+      // included — on every single addTelemetry call, roughly once a second
+      // while recording. That's O(n) work per tick and O(n^2) total over a
+      // drive, all on the JS thread, for an array that's read back from the
+      // live in-memory store (not from persisted storage) by both stopDrive
+      // and SyncWorker anyway. The only thing persisting it protected
+      // against was recovering raw telemetry after the whole JS process is
+      // killed mid-recording - there's no UI that resumes a recording on
+      // relaunch today, so that data would sit unused in storage even if
+      // kept. distance/duration/status still persist normally (cheap,
+      // fixed-size fields), so drive progress survives a restart; only the
+      // detailed point-by-point trace used for route rendering does not.
+      partialize: partializeDriveState,
     }
   )
 );
