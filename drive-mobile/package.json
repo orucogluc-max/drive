@@ -29,6 +29,7 @@
     "expo-image-picker": "*",
     "expo-linear-gradient": "~57.0.0",
     "expo-location": "*",
+    "expo-secure-store": "^57.0.0",
     "expo-sensors": "*",
     "expo-sharing": "*",
     "expo-splash-screen": "*",

@@ -1,0 +1,38 @@
+# Supabase project configuration.
+#
+# Added as part of Phase 2 (Security Hardening): before this file existed,
+# every Edge Function's `verify_jwt` behavior was an undocumented dashboard
+# default, meaning nobody looking at this repo could tell whether an
+# unauthenticated request could reach these functions at all. Making it
+# explicit here removes that ambiguity.
+project_id = "vptvsroxeqmzbmukufxg"
+
+# All three functions require an authenticated Supabase user session and
+# perform their own additional in-code authorization on top of that
+# (see supabase/functions/_shared/authz.ts, and the per-function checks in
+# gamification-engine and rule-based-coach). None of these are internal-only
+# / service-to-service functions with no user context, so verify_jwt = true
+# is correct for all three: the platform gateway rejects any request
+# without a valid Supabase-issued JWT before the function code even runs,
+# as defense-in-depth on top of each function's own checks.
+
+[functions.process-drive]
+# Called directly by the mobile client with the recording user's own JWT
+# when a drive finishes. Its DB writes are scoped by the drives_all_own RLS
+# policy (user_id = auth.uid()), so an authenticated-but-mismatched caller
+# simply updates 0 rows rather than someone else's drive.
+verify_jwt = true
+
+[functions.gamification-engine]
+# Invoked two ways: (1) internally by process-drive, which forwards the
+# original caller's Authorization header; (2) directly reachable as its own
+# HTTP endpoint. Verifies the caller's JWT and that they own the drive_id
+# in the request before doing any privileged (service-role) write to
+# user_badges/notifications.
+verify_jwt = true
+
+[functions.rule-based-coach]
+# Same invocation pattern as gamification-engine. Verifies the caller's JWT
+# and drive ownership before reading drive history or writing to
+# drive_insights (which has no client-side INSERT policy at all).
+verify_jwt = true

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkOwnership } from "../_shared/authz.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,25 +13,50 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized: missing Authorization header" }), { status: 401, headers: corsHeaders });
+    }
+
+    // Authenticate the caller from their own JWT - never trust a user_id
+    // passed in the request body.
+    const anonClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized: invalid session" }), { status: 401, headers: corsHeaders });
+    }
+
+    const { drive_id } = await req.json();
+
+    if (!drive_id) {
+      return new Response(JSON.stringify({ error: "Missing drive_id" }), { status: 400, headers: corsHeaders });
+    }
+
+    // Service-role client for the actual privileged work: drive_insights
+    // intentionally has no client-side INSERT policy (see migrations), so
+    // only a verified server-side path like this one can write to it.
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { drive_id, user_id } = await req.json();
-
-    if (!drive_id || !user_id) {
-      return new Response(JSON.stringify({ error: "Missing drive_id or user_id" }), { status: 400, headers: corsHeaders });
-    }
-
     // Fetch the current drive
     const { data: currentDrive, error: driveError } = await supabaseClient
       .from('drives')
-      .select('score_smoothness, score_consistency, duration_s, distance_m, started_at, max_speed_kmh, telemetry_count')
+      .select('user_id, score_smoothness, score_consistency, duration_s, distance_m, started_at, max_speed_kmh, telemetry_count')
       .eq('id', drive_id)
       .single();
 
-    if (driveError || !currentDrive) throw driveError || new Error("Drive not found");
+    const access = checkOwnership({ id: user.id }, driveError ? null : currentDrive);
+    if (!access.allowed) {
+      return new Response(JSON.stringify({ error: access.reason }), { status: access.status ?? 403, headers: corsHeaders });
+    }
+
+    const user_id = user.id;
 
     // Fetch user's previous completed drives (up to 10 for baseline)
     const { data: pastDrives } = await supabaseClient
